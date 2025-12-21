@@ -1,0 +1,215 @@
+syntax = "proto3";
+
+option csharp_namespace = "ApiGateway.Protos";
+
+package time;
+
+service TimeGrpc {
+  rpc CheckIn (CheckInRequest) returns (CheckInResponse);
+  rpc CheckOut (CheckOutRequest) returns (CheckOutResponse);
+  rpc GetAttendanceHistory (GetAttendanceHistoryRequest) returns (AttendanceHistoryResponse);
+  rpc GetAttendanceStatus (GetAttendanceStatusRequest) returns (AttendanceStatusResponse);
+  rpc CreateLeaveRequest (CreateLeaveRequestRequest) returns (LeaveRequestResponse);
+  rpc GetLeaveRequests (GetLeaveRequestsRequest) returns (LeaveRequestsResponse);
+  rpc GetLeaveRequestDetail (GetLeaveRequestDetailRequest) returns (LeaveRequestResponse);
+  rpc ApproveLeaveRequest (ApproveLeaveRequestRequest) returns (LeaveRequestResponse);
+  rpc RejectLeaveRequest (RejectLeaveRequestRequest) returns (LeaveRequestResponse);
+  rpc GetLeaveBalance (GetLeaveBalanceRequest) returns (LeaveBalanceResponse);
+  rpc GetShifts (GetShiftsRequest) returns (ShiftsResponse);
+  rpc GetEmployeeShift (GetEmployeeShiftRequest) returns (ShiftResponse);
+}
+
+message CheckInRequest {
+  string employee_id = 1;
+  string note = 2;
+  double latitude = 3;
+  double longitude = 4;
+}
+
+message CheckInResponse {
+  string id = 1;
+  string employee_id = 2;
+  string check_in_time = 3;
+  string status = 4; // on_time, late
+  int32 late_minutes = 5;
+  string message = 6;
+}
+
+message CheckOutRequest {
+  string employee_id = 1;
+  string note = 2;
+  double latitude = 3;
+  double longitude = 4;
+}
+
+message CheckOutResponse {
+  string id = 1;
+  string employee_id = 2;
+  string check_in_time = 3;
+  string check_out_time = 4;
+  double total_hours = 5;
+  string status = 6; // on_time, early_leave, overtime
+  int32 early_leave_minutes = 7;
+  int32 overtime_minutes = 8;
+  string message = 9;
+}
+
+message GetAttendanceHistoryRequest {
+  string employee_id = 1;
+  string start_date = 2;
+  string end_date = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message AttendanceRecord {
+  string id = 1;
+  string employee_id = 2;
+  string date = 3;
+  string check_in_time = 4;
+  string check_out_time = 5;
+  double total_hours = 6;
+  string check_in_status = 7; // on_time, late
+  string check_out_status = 8; // on_time, early_leave, overtime
+  int32 late_minutes = 9;
+  int32 early_leave_minutes = 10;
+  int32 overtime_minutes = 11;
+  string note = 12;
+}
+
+message AttendanceHistoryResponse {
+  repeated AttendanceRecord records = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  AttendanceSummary summary = 5;
+}
+
+message AttendanceSummary {
+  int32 total_days = 1;
+  int32 present_days = 2;
+  int32 absent_days = 3;
+  int32 late_count = 4;
+  int32 early_leave_count = 5;
+  double total_hours = 6;
+  double average_hours_per_day = 7;
+}
+
+message GetAttendanceStatusRequest {
+  string employee_id = 1;
+  string date = 2;
+}
+
+message AttendanceStatusResponse {
+  bool is_checked_in = 1;
+  bool is_checked_out = 2;
+  string check_in_time = 3;
+  string check_out_time = 4;
+  double current_hours = 5;
+}
+
+message CreateLeaveRequestRequest {
+  string employee_id = 1;
+  string leave_type = 2; // annual, sick, unpaid
+  string start_date = 3;
+  string end_date = 4;
+  string reason = 5;
+  string approver_id = 6; // Manager or HR
+  string approver_type = 7; // manager, hr
+}
+
+message LeaveRequestResponse {
+  string id = 1;
+  string employee_id = 2;
+  string employee_name = 3;
+  string leave_type = 4;
+  string start_date = 5;
+  string end_date = 6;
+  int32 total_days = 7;
+  string reason = 8;
+  string status = 9; // pending, approved, rejected
+  string approver_id = 10;
+  string approver_name = 11;
+  string approver_type = 12;
+  string approved_at = 13;
+  string rejection_reason = 14;
+  string created_at = 15;
+  string updated_at = 16;
+}
+
+message GetLeaveRequestsRequest {
+  string employee_id = 1;
+  string approver_id = 2;
+  string status = 3;
+  string leave_type = 4;
+  string start_date = 5;
+  string end_date = 6;
+  int32 page = 7;
+  int32 page_size = 8;
+}
+
+message LeaveRequestsResponse {
+  repeated LeaveRequestResponse requests = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetLeaveRequestDetailRequest {
+  string leave_request_id = 1;
+}
+
+message ApproveLeaveRequestRequest {
+  string leave_request_id = 1;
+  string approver_id = 2;
+  string note = 3;
+}
+
+message RejectLeaveRequestRequest {
+  string leave_request_id = 1;
+  string approver_id = 2;
+  string reason = 3;
+}
+
+message GetLeaveBalanceRequest {
+  string employee_id = 1;
+  int32 year = 2;
+}
+
+message LeaveBalanceResponse {
+  string employee_id = 1;
+  int32 year = 2;
+  int32 annual_total = 3;
+  int32 annual_used = 4;
+  int32 annual_remaining = 5;
+  int32 sick_total = 6;
+  int32 sick_used = 7;
+  int32 sick_remaining = 8;
+  int32 unpaid_used = 9;
+}
+
+message GetShiftsRequest {
+  string department_id = 1;
+}
+
+message Shift {
+  string id = 1;
+  string name = 2;
+  string start_time = 3;
+  string end_time = 4;
+  int32 break_minutes = 5;
+  bool is_default = 6;
+}
+
+message ShiftsResponse {
+  repeated Shift shifts = 1;
+}
+
+message GetEmployeeShiftRequest {
+  string employee_id = 1;
+  string date = 2;
+}
+
+message ShiftResponse {
+  Shift shift = 1;
+}

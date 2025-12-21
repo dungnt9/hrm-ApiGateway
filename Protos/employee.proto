@@ -1,0 +1,175 @@
+syntax = "proto3";
+
+option csharp_namespace = "ApiGateway.Protos";
+
+package employee;
+
+service EmployeeGrpc {
+  rpc GetEmployee (GetEmployeeRequest) returns (EmployeeResponse);
+  rpc GetEmployees (GetEmployeesRequest) returns (EmployeesResponse);
+  rpc CreateEmployee (CreateEmployeeRequest) returns (EmployeeResponse);
+  rpc UpdateEmployee (UpdateEmployeeRequest) returns (EmployeeResponse);
+  rpc DeleteEmployee (DeleteEmployeeRequest) returns (DeleteEmployeeResponse);
+  rpc GetOrgChart (GetOrgChartRequest) returns (OrgChartResponse);
+  rpc GetTeamMembers (GetTeamMembersRequest) returns (EmployeesResponse);
+  rpc GetEmployeeManager (GetEmployeeManagerRequest) returns (EmployeeResponse);
+  rpc ValidateManagerPermission (ValidateManagerPermissionRequest) returns (ValidateManagerPermissionResponse);
+  rpc AssignRole (AssignRoleRequest) returns (AssignRoleResponse);
+  rpc GetDepartments (GetDepartmentsRequest) returns (DepartmentsResponse);
+  rpc GetTeams (GetTeamsRequest) returns (TeamsResponse);
+}
+
+message GetEmployeeRequest {
+  string employee_id = 1;
+}
+
+message GetEmployeesRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string department_id = 3;
+  string team_id = 4;
+  string search = 5;
+}
+
+message CreateEmployeeRequest {
+  string first_name = 1;
+  string last_name = 2;
+  string email = 3;
+  string phone = 4;
+  string department_id = 5;
+  string team_id = 6;
+  string position = 7;
+  string manager_id = 8;
+  string keycloak_user_id = 9;
+  string hire_date = 10;
+}
+
+message UpdateEmployeeRequest {
+  string employee_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string email = 4;
+  string phone = 5;
+  string department_id = 6;
+  string team_id = 7;
+  string position = 8;
+  string manager_id = 9;
+  string status = 10;
+}
+
+message DeleteEmployeeRequest {
+  string employee_id = 1;
+}
+
+message DeleteEmployeeResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message EmployeeResponse {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string email = 4;
+  string phone = 5;
+  string department_id = 6;
+  string department_name = 7;
+  string team_id = 8;
+  string team_name = 9;
+  string position = 10;
+  string manager_id = 11;
+  string manager_name = 12;
+  string keycloak_user_id = 13;
+  string hire_date = 14;
+  string status = 15;
+  string created_at = 16;
+  string updated_at = 17;
+}
+
+message EmployeesResponse {
+  repeated EmployeeResponse employees = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetOrgChartRequest {
+  string root_id = 1; // Company, Department, Team ID or empty for full chart
+  int32 depth = 2; // How many levels deep to fetch
+}
+
+message OrgChartNode {
+  string id = 1;
+  string name = 2;
+  string type = 3; // company, department, team, employee
+  string parent_id = 4;
+  repeated OrgChartNode children = 5;
+  EmployeeResponse employee_data = 6; // Only for type = employee
+}
+
+message OrgChartResponse {
+  OrgChartNode root = 1;
+}
+
+message GetTeamMembersRequest {
+  string team_id = 1;
+  string manager_id = 2;
+}
+
+message GetEmployeeManagerRequest {
+  string employee_id = 1;
+}
+
+message ValidateManagerPermissionRequest {
+  string manager_id = 1;
+  string employee_id = 2;
+}
+
+message ValidateManagerPermissionResponse {
+  bool is_valid = 1;
+  string message = 2;
+}
+
+message AssignRoleRequest {
+  string employee_id = 1;
+  string role = 2;
+}
+
+message AssignRoleResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetDepartmentsRequest {
+  string company_id = 1;
+}
+
+message Department {
+  string id = 1;
+  string name = 2;
+  string company_id = 3;
+  string manager_id = 4;
+  string manager_name = 5;
+  string created_at = 6;
+}
+
+message DepartmentsResponse {
+  repeated Department departments = 1;
+}
+
+message GetTeamsRequest {
+  string department_id = 1;
+}
+
+message Team {
+  string id = 1;
+  string name = 2;
+  string department_id = 3;
+  string manager_id = 4;
+  string manager_name = 5;
+  string created_at = 6;
+}
+
+message TeamsResponse {
+  repeated Team teams = 1;
+}
