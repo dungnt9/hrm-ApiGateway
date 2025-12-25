@@ -17,6 +17,11 @@ public interface ITimeGrpcService
     Task<LeaveBalanceResponse> GetLeaveBalanceAsync(string employeeId, int year);
     Task<ShiftsResponse> GetShiftsAsync(string? departmentId);
     Task<ShiftResponse> GetEmployeeShiftAsync(string employeeId, string? date);
+    Task<OvertimeRequestResponse> CreateOvertimeRequestAsync(CreateOvertimeRequestRequest request);
+    Task<OvertimeRequestsResponse> GetOvertimeRequestsAsync(string? employeeId, string? status, string? startDate, string? endDate, int page, int pageSize);
+    Task<OvertimeRequestResponse> GetOvertimeRequestDetailAsync(string overtimeRequestId);
+    Task<OvertimeRequestResponse> ApproveOvertimeRequestAsync(string overtimeRequestId, string approverId, string? comment);
+    Task<OvertimeRequestResponse> RejectOvertimeRequestAsync(string overtimeRequestId, string approverId, string reason);
 }
 
 public class TimeGrpcService : ITimeGrpcService
@@ -136,5 +141,52 @@ public class TimeGrpcService : ITimeGrpcService
             Date = date ?? ""
         };
         return await _client.GetEmployeeShiftAsync(request);
+    }
+
+    public async Task<OvertimeRequestResponse> CreateOvertimeRequestAsync(CreateOvertimeRequestRequest request)
+    {
+        return await _client.CreateOvertimeRequestAsync(request);
+    }
+
+    public async Task<OvertimeRequestsResponse> GetOvertimeRequestsAsync(string? employeeId, string? status, string? startDate, string? endDate, int page, int pageSize)
+    {
+        var request = new GetOvertimeRequestsRequest
+        {
+            EmployeeId = employeeId ?? "",
+            Status = status ?? "",
+            StartDate = startDate ?? "",
+            EndDate = endDate ?? "",
+            Page = page,
+            PageSize = pageSize
+        };
+        return await _client.GetOvertimeRequestsAsync(request);
+    }
+
+    public async Task<OvertimeRequestResponse> GetOvertimeRequestDetailAsync(string overtimeRequestId)
+    {
+        var request = new GetOvertimeRequestDetailRequest { OvertimeRequestId = overtimeRequestId };
+        return await _client.GetOvertimeRequestDetailAsync(request);
+    }
+
+    public async Task<OvertimeRequestResponse> ApproveOvertimeRequestAsync(string overtimeRequestId, string approverId, string? comment)
+    {
+        var request = new ApproveOvertimeRequestRequest
+        {
+            OvertimeRequestId = overtimeRequestId,
+            ApproverId = approverId,
+            Comment = comment ?? ""
+        };
+        return await _client.ApproveOvertimeRequestAsync(request);
+    }
+
+    public async Task<OvertimeRequestResponse> RejectOvertimeRequestAsync(string overtimeRequestId, string approverId, string reason)
+    {
+        var request = new RejectOvertimeRequestRequest
+        {
+            OvertimeRequestId = overtimeRequestId,
+            ApproverId = approverId,
+            Reason = reason
+        };
+        return await _client.RejectOvertimeRequestAsync(request);
     }
 }

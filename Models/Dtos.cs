@@ -68,3 +68,23 @@ public class RejectLeaveRequestDto
 {
     public string Reason { get; set; } = string.Empty;
 }
+
+public class CreateOvertimeRequestDto
+{
+    public string? EmployeeId { get; set; }
+    public string Date { get; set; } = string.Empty;
+    public string StartTime { get; set; } = string.Empty;
+    public string EndTime { get; set; } = string.Empty;
+    public int TotalMinutes { get; set; }
+    public string? Reason { get; set; }
+}
+
+public class ApproveOvertimeRequestDto
+{
+    public string? Comment { get; set; }
+}
+
+public class RejectOvertimeRequestDto
+{
+    public string Reason { get; set; } = string.Empty;
+}

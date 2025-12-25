@@ -12,11 +12,16 @@ namespace ApiGateway.Controllers;
 public class AttendanceController : ControllerBase
 {
     private readonly ITimeGrpcService _timeService;
+    private readonly IEmployeeGrpcService _employeeService;
     private readonly ILogger<AttendanceController> _logger;
 
-    public AttendanceController(ITimeGrpcService timeService, ILogger<AttendanceController> logger)
+    public AttendanceController(
+        ITimeGrpcService timeService,
+        IEmployeeGrpcService employeeService,
+        ILogger<AttendanceController> logger)
     {
         _timeService = timeService;
+        _employeeService = employeeService;
         _logger = logger;
     }
 
@@ -130,15 +135,118 @@ public class AttendanceController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Get attendance for all team members on a specific date
+    /// </summary>
     [HttpGet("team/{teamId}")]
     [Authorize(Policy = "ManagerOrHR")]
     public async Task<IActionResult> GetTeamAttendance(
         string teamId,
         [FromQuery] string? date = null)
     {
-        // This would need to be implemented by calling employee service first
-        // Then getting attendance for each team member
-        return Ok(new { message = "Team attendance endpoint" });
+        try
+        {
+            var targetDate = date ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+            // Get team members from employee service
+            var employeesResponse = await _employeeService.GetTeamMembersAsync(teamId, null);
+            if (employeesResponse.Employees == null || !employeesResponse.Employees.Any())
+            {
+                return Ok(new
+                {
+                    teamId = teamId,
+                    date = targetDate,
+                    members = Array.Empty<object>(),
+                    summary = new
+                    {
+                        totalMembers = 0,
+                        presentCount = 0,
+                        absentCount = 0,
+                        lateCount = 0,
+                        presenceRate = 0.0m
+                    }
+                });
+            }
+
+            var attendanceRecords = new List<object>();
+            int presentCount = 0, absentCount = 0, lateCount = 0;
+
+            // Get attendance for each team member
+            foreach (var employee in employeesResponse.Employees)
+            {
+                try
+                {
+                    var attendanceResponse = await _timeService.GetAttendanceStatusAsync(employee.Id, targetDate);
+
+                    bool isPresent = attendanceResponse.IsCheckedIn;
+                    if (isPresent) presentCount++;
+                    else absentCount++;
+
+                    // For more details, we could also fetch history
+                    var historyResponse = await _timeService.GetAttendanceHistoryAsync(
+                        employee.Id,
+                        targetDate,
+                        targetDate,
+                        1,
+                        1);
+
+                    var record = historyResponse.Records.FirstOrDefault();
+
+                    attendanceRecords.Add(new
+                    {
+                        employeeId = employee.Id,
+                        employeeName = $"{employee.FirstName} {employee.LastName}",
+                        position = employee.Position,
+                        status = isPresent ? "Present" : "Absent",
+                        checkInTime = record?.CheckInTime,
+                        checkOutTime = record?.CheckOutTime,
+                        totalHours = record?.TotalHours ?? 0,
+                        lateMinutes = record?.LateMinutes ?? 0,
+                        isLate = (record?.LateMinutes ?? 0) > 0
+                    });
+
+                    if ((record?.LateMinutes ?? 0) > 0)
+                        lateCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"Error fetching attendance for employee {employee.Id}: {ex.Message}");
+                    // Continue with next employee on error
+                    attendanceRecords.Add(new
+                    {
+                        employeeId = employee.Id,
+                        employeeName = $"{employee.FirstName} {employee.LastName}",
+                        position = employee.Position,
+                        status = "Unknown",
+                        error = "Failed to fetch attendance"
+                    });
+                    absentCount++;
+                }
+            }
+
+            var totalMembers = employeesResponse.Employees.Count();
+            var presenceRate = totalMembers > 0 ? (decimal)presentCount / totalMembers * 100 : 0;
+
+            return Ok(new
+            {
+                teamId = teamId,
+                date = targetDate,
+                members = attendanceRecords.OrderByDescending(x => x),
+                summary = new
+                {
+                    totalMembers = totalMembers,
+                    presentCount = presentCount,
+                    absentCount = absentCount,
+                    lateCount = lateCount,
+                    presenceRate = Math.Round(presenceRate, 2)
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching team attendance");
+            return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+        }
     }
 
     [HttpGet("shifts")]

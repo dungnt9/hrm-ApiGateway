@@ -1,5 +1,6 @@
 using ApiGateway.Configuration;
 using ApiGateway.GraphQL;
+using ApiGateway.Hubs;
 using ApiGateway.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -58,7 +59,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidateAudience = true,
+            ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true
         };
@@ -90,6 +91,9 @@ builder.Services.AddGrpcClient<ApiGateway.Protos.TimeGrpc.TimeGrpcClient>("TimeS
 builder.Services.AddScoped<IEmployeeGrpcService, EmployeeGrpcService>();
 builder.Services.AddScoped<ITimeGrpcService, TimeGrpcService>();
 
+// Configure SignalR
+builder.Services.AddSignalR();
+
 // Configure FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
@@ -114,6 +118,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// HttpClient for Keycloak
+builder.Services.AddHttpClient();
+
 // Health checks
 builder.Services.AddHealthChecks();
 
@@ -133,5 +140,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapGraphQL();
 app.MapHealthChecks("/health");
+app.MapHub<NotificationHub>("/hubs/notification");
 
 app.Run();

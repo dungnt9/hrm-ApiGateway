@@ -17,6 +17,11 @@ service TimeGrpc {
   rpc GetLeaveBalance (GetLeaveBalanceRequest) returns (LeaveBalanceResponse);
   rpc GetShifts (GetShiftsRequest) returns (ShiftsResponse);
   rpc GetEmployeeShift (GetEmployeeShiftRequest) returns (ShiftResponse);
+  rpc CreateOvertimeRequest (CreateOvertimeRequestRequest) returns (OvertimeRequestResponse);
+  rpc GetOvertimeRequests (GetOvertimeRequestsRequest) returns (OvertimeRequestsResponse);
+  rpc GetOvertimeRequestDetail (GetOvertimeRequestDetailRequest) returns (OvertimeRequestResponse);
+  rpc ApproveOvertimeRequest (ApproveOvertimeRequestRequest) returns (OvertimeRequestResponse);
+  rpc RejectOvertimeRequest (RejectOvertimeRequestRequest) returns (OvertimeRequestResponse);
 }
 
 message CheckInRequest {
@@ -212,4 +217,63 @@ message GetEmployeeShiftRequest {
 
 message ShiftResponse {
   Shift shift = 1;
+}
+
+message CreateOvertimeRequestRequest {
+  string employee_id = 1;
+  string date = 2;
+  string start_time = 3;
+  string end_time = 4;
+  int32 total_minutes = 5;
+  string reason = 6;
+}
+
+message GetOvertimeRequestsRequest {
+  string employee_id = 1;
+  string status = 2;
+  string start_date = 3;
+  string end_date = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+
+message GetOvertimeRequestDetailRequest {
+  string overtime_request_id = 1;
+}
+
+message ApproveOvertimeRequestRequest {
+  string overtime_request_id = 1;
+  string approver_id = 2;
+  string comment = 3;
+}
+
+message RejectOvertimeRequestRequest {
+  string overtime_request_id = 1;
+  string approver_id = 2;
+  string reason = 3;
+}
+
+message OvertimeRequestResponse {
+  string id = 1;
+  string employee_id = 2;
+  string employee_name = 3;
+  string date = 4;
+  string start_time = 5;
+  string end_time = 6;
+  int32 total_minutes = 7;
+  string reason = 8;
+  string status = 9;
+  string approver_id = 10;
+  string approver_name = 11;
+  string approver_comment = 12;
+  string approved_at = 13;
+  string created_at = 14;
+  string updated_at = 15;
+}
+
+message OvertimeRequestsResponse {
+  repeated OvertimeRequestResponse requests = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
 }
