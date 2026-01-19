@@ -1,0 +1,56 @@
+# =====================================================
+# API Gateway - Docker Compose
+# =====================================================
+#
+# Yêu cầu:
+#   - Infrastructure phải đang chạy (hrm-deployment/docker-compose.infra.yml)
+#   - Employee Service phải đang chạy (gRPC)
+#   - Time Service phải đang chạy (gRPC)
+#   - Notification Service phải đang chạy (HTTP)
+#
+# Chạy service:
+#   docker compose up -d --build
+#
+# Xem logs:
+#   docker compose logs -f
+#
+# Dừng service:
+#   docker compose down
+#
+# =====================================================
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hrm-api-gateway
+    restart: unless-stopped
+    env_file:
+      - ../hrm-deployment/.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: "http://+:8080"
+      GrpcServices__EmployeeService: "http://hrm-employee-service:8081"
+      GrpcServices__TimeService: "http://hrm-time-service:8081"
+      NotificationService__Url: "http://hrm-notification-service:8080"
+      Keycloak__Authority: ${KEYCLOAK_AUTHORITY}
+      Keycloak__Audience: hrm-api
+      Keycloak__ClientId: ${KEYCLOAK_CLIENT_ID}
+      Keycloak__ClientSecret: ${KEYCLOAK_CLIENT_SECRET}
+      Keycloak__RequireHttps: "false"
+      Cors__AllowedOrigins__0: "http://localhost:3000"
+      Cors__AllowedOrigins__1: "http://127.0.0.1:3000"
+    ports:
+      - "${API_GATEWAY_PORT:-5000}:8080"
+    networks:
+      - hrm-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  hrm-network:
+    external: true

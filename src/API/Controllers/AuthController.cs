@@ -195,6 +195,89 @@ public class AuthController : ControllerBase
             roles = roles
         });
     }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        try
+        {
+            var userId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "User not found" });
+            }
+
+            var keycloakBaseUrl = _configuration["Keycloak:Authority"]?.Replace("/realms/hrm", "")
+                ?? "http://localhost:8080";
+            var realm = _configuration["Keycloak:Realm"] ?? "hrm";
+            var adminUsername = _configuration["Keycloak:AdminUsername"] ?? "admin";
+            var adminPassword = _configuration["Keycloak:AdminPassword"] ?? "admin";
+
+            var client = _httpClientFactory.CreateClient();
+
+            // Get admin token
+            var tokenEndpoint = $"{keycloakBaseUrl}/realms/master/protocol/openid-connect/token";
+            var tokenBody = new Dictionary<string, string>
+            {
+                { "grant_type", "password" },
+                { "client_id", "admin-cli" },
+                { "username", adminUsername },
+                { "password", adminPassword }
+            };
+
+            var tokenContent = new FormUrlEncodedContent(tokenBody);
+            var tokenResponse = await client.PostAsync(tokenEndpoint, tokenContent);
+
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to get admin token for password change");
+                return StatusCode(500, new { message = "Password change service unavailable" });
+            }
+
+            var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+            var adminToken = JsonSerializer.Deserialize<KeycloakTokenResponse>(tokenJson, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            });
+
+            // Change password via Keycloak Admin API
+            var resetPasswordEndpoint = $"{keycloakBaseUrl}/admin/realms/{realm}/users/{userId}/reset-password";
+
+            var passwordPayload = new
+            {
+                type = "password",
+                value = dto.NewPassword,
+                temporary = false
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Put, resetPasswordEndpoint)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(passwordPayload),
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                )
+            };
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken?.AccessToken);
+
+            var response = await client.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Password change failed: {Error}", error);
+                return BadRequest(new { message = "Failed to change password" });
+            }
+
+            return Ok(new { message = "Password changed successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Change password error");
+            return StatusCode(500, new { message = "Password change failed" });
+        }
+    }
 }
 
 public class LoginDto
@@ -211,6 +294,12 @@ public class RefreshTokenDto
 public class LogoutDto
 {
     public string RefreshToken { get; set; } = string.Empty;
+}
+
+public class ChangePasswordDto
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
 }
 
 public class KeycloakTokenResponse

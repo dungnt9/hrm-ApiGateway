@@ -97,6 +97,7 @@ src/
 | `POST` | `/refresh` | Làm mới JWT token | - |
 | `POST` | `/logout` | Đăng xuất | Required |
 | `GET` | `/me` | Lấy thông tin user hiện tại | Required |
+| `POST` | `/change-password` | Đổi mật khẩu | Required |
 
 **Login Request:**
 ```json
