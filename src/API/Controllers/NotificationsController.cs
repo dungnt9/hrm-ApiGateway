@@ -180,7 +180,7 @@ public class NotificationsController : ControllerBase
         try
         {
             var token = GetAuthorizationToken();
-            var url = $"{_notificationServiceUrl}/api/preferences";
+            var url = $"{_notificationServiceUrl}/api/notifications/settings";
 
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -211,7 +211,7 @@ public class NotificationsController : ControllerBase
         try
         {
             var token = GetAuthorizationToken();
-            var url = $"{_notificationServiceUrl}/api/preferences";
+            var url = $"{_notificationServiceUrl}/api/notifications/settings";
 
             var request = new HttpRequestMessage(HttpMethod.Put, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -234,6 +234,24 @@ public class NotificationsController : ControllerBase
             _logger.LogError(ex, "Error updating preferences");
             return StatusCode(500, new { message = "Internal server error" });
         }
+    }
+
+    /// <summary>
+    /// Get notification settings for current user (alias for preferences)
+    /// </summary>
+    [HttpGet("settings")]
+    public async Task<IActionResult> GetSettings()
+    {
+        return await GetPreferences();
+    }
+
+    /// <summary>
+    /// Update notification settings for current user (alias for preferences)
+    /// </summary>
+    [HttpPut("settings")]
+    public async Task<IActionResult> UpdateSettings([FromBody] Dictionary<string, object> settings)
+    {
+        return await UpdatePreferences(settings);
     }
 
     private string GetAuthorizationToken()

@@ -70,9 +70,9 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Employee", policy => policy.RequireRole("employee"));
     options.AddPolicy("Manager", policy => policy.RequireRole("manager"));
-    options.AddPolicy("HRStaff", policy => policy.RequireRole("hr_staff"));
+    options.AddPolicy("HRStaff", policy => policy.RequireRole("hr_staff", "system_admin"));
     options.AddPolicy("Admin", policy => policy.RequireRole("system_admin"));
-    options.AddPolicy("ManagerOrHR", policy => policy.RequireRole("manager", "hr_staff"));
+    options.AddPolicy("ManagerOrHR", policy => policy.RequireRole("manager", "hr_staff", "system_admin"));
 });
 
 // Configure gRPC clients
@@ -128,11 +128,13 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+// Always enable Swagger for development and testing
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "HRM API Gateway v1");
+    c.RoutePrefix = "swagger"; // Access via /swagger/index.html
+});
 
 app.UseCors("AllowFrontend");
 app.UseAuthentication();

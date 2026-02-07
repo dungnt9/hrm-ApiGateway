@@ -12,11 +12,13 @@ namespace ApiGateway.Controllers;
 public class LeaveController : ControllerBase
 {
     private readonly ITimeGrpcService _timeService;
+    private readonly IEmployeeGrpcService _employeeService;
     private readonly ILogger<LeaveController> _logger;
 
-    public LeaveController(ITimeGrpcService timeService, ILogger<LeaveController> logger)
+    public LeaveController(ITimeGrpcService timeService, IEmployeeGrpcService employeeService, ILogger<LeaveController> logger)
     {
         _timeService = timeService;
+        _employeeService = employeeService;
         _logger = logger;
     }
 
@@ -24,15 +26,41 @@ public class LeaveController : ControllerBase
     public async Task<IActionResult> CreateLeaveRequest([FromBody] CreateLeaveRequestDto dto)
     {
         var employeeId = GetCurrentEmployeeId();
+        var actualEmployeeId = dto.EmployeeId ?? employeeId;
+
+        // Auto-populate approverId if not provided
+        var approverId = dto.ApproverId;
+        if (string.IsNullOrEmpty(approverId))
+        {
+            try
+            {
+                var employee = await _employeeService.GetEmployeeAsync(actualEmployeeId);
+                approverId = employee.ManagerId;
+
+                if (string.IsNullOrEmpty(approverId))
+                {
+                    return BadRequest(new { message = "No manager assigned to employee. Please specify an approverId." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get employee manager for leave request");
+                return BadRequest(new { message = "Could not determine approver. Please specify an approverId." });
+            }
+        }
+
+        // Default approverType to "manager" if not provided
+        var approverType = string.IsNullOrEmpty(dto.ApproverType) ? "manager" : dto.ApproverType;
+
         var request = new Protos.CreateLeaveRequestRequest
         {
-            EmployeeId = dto.EmployeeId ?? employeeId,
+            EmployeeId = actualEmployeeId,
             LeaveType = dto.LeaveType,
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
             Reason = dto.Reason ?? "",
-            ApproverId = dto.ApproverId,
-            ApproverType = dto.ApproverType
+            ApproverId = approverId,
+            ApproverType = approverType
         };
 
         var response = await _timeService.CreateLeaveRequestAsync(request);
@@ -137,7 +165,19 @@ public class LeaveController : ControllerBase
 
     private string GetCurrentEmployeeId()
     {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        // Get employee_id from JWT claims (set by Keycloak)
+        var employeeId = User.FindFirst("employee_id")?.Value;
+
+        if (!string.IsNullOrEmpty(employeeId))
+            return employeeId;
+
+        // Fallback: try to get from preferred_username (might be employee code)
+        var username = User.FindFirst("preferred_username")?.Value;
+        if (!string.IsNullOrEmpty(username))
+            return username;
+
+        // Last resort: use sub (Keycloak user ID)
+        return User.FindFirst("sub")?.Value ?? "";
     }
 
     private static object MapToDto(Protos.LeaveRequestResponse r) => new

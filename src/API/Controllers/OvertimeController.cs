@@ -179,7 +179,19 @@ public class OvertimeController : ControllerBase
 
     private string GetCurrentEmployeeId()
     {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        // Get employee_id from JWT claims (set by Keycloak)
+        var employeeId = User.FindFirst("employee_id")?.Value;
+
+        if (!string.IsNullOrEmpty(employeeId))
+            return employeeId;
+
+        // Fallback: try to get from preferred_username (might be employee code)
+        var username = User.FindFirst("preferred_username")?.Value;
+        if (!string.IsNullOrEmpty(username))
+            return username;
+
+        // Last resort: use sub (Keycloak user ID)
+        return User.FindFirst("sub")?.Value ?? "";
     }
 
     private static object MapToDto(Protos.OvertimeRequestResponse r) => new
