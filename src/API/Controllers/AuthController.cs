@@ -113,6 +113,8 @@ public class AuthController : ControllerBase
 
             if (!response.IsSuccessStatusCode)
             {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Keycloak refresh failed: {StatusCode} {Error}", response.StatusCode, errorContent);
                 return Unauthorized(new { message = "Token refresh failed" });
             }
 
