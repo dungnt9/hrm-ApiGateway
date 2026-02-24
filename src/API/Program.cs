@@ -56,13 +56,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.Authority = builder.Configuration["Keycloak:Authority"];
         options.Audience = builder.Configuration["Keycloak:Audience"];
         options.RequireHttpsMetadata = false;
+        options.MapInboundClaims = false; // Prevent ASP.NET Core from remapping JWT claims (e.g. "sub" → long URI)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            RoleClaimType = "roles" // Map Keycloak "roles" claim to ASP.NET Core roles
+            RoleClaimType = "roles", // Map Keycloak "roles" claim to ASP.NET Core roles
+            NameClaimType = "preferred_username" // Use Keycloak username as Name claim
         };
     });
 

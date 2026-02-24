@@ -179,18 +179,12 @@ public class OvertimeController : ControllerBase
 
     private string GetCurrentEmployeeId()
     {
-        // Get employee_id from JWT claims (set by Keycloak)
+        // Get employee_id from JWT claims — only use if it's a valid GUID (DB employee ID)
         var employeeId = User.FindFirst("employee_id")?.Value;
-
-        if (!string.IsNullOrEmpty(employeeId))
+        if (!string.IsNullOrEmpty(employeeId) && Guid.TryParse(employeeId, out _))
             return employeeId;
 
-        // Fallback: try to get from preferred_username (might be employee code)
-        var username = User.FindFirst("preferred_username")?.Value;
-        if (!string.IsNullOrEmpty(username))
-            return username;
-
-        // Last resort: use sub (Keycloak user ID)
+        // Use sub (Keycloak user UUID)
         return User.FindFirst("sub")?.Value ?? "";
     }
 

@@ -17,6 +17,7 @@ public interface IEmployeeGrpcService
     Task<AssignRoleResponse> AssignRoleAsync(string employeeId, string role);
     Task<DepartmentsResponse> GetDepartmentsAsync(string? companyId);
     Task<TeamsResponse> GetTeamsAsync(string? departmentId);
+    Task<EmployeeResponse> GetEmployeeByKeycloakIdAsync(string keycloakUserId);
 }
 
 public class EmployeeGrpcService : IEmployeeGrpcService
@@ -121,5 +122,11 @@ public class EmployeeGrpcService : IEmployeeGrpcService
     {
         var request = new GetTeamsRequest { DepartmentId = departmentId ?? "" };
         return await _client.GetTeamsAsync(request);
+    }
+
+    public async Task<EmployeeResponse> GetEmployeeByKeycloakIdAsync(string keycloakUserId)
+    {
+        var request = new GetEmployeeByKeycloakIdRequest { KeycloakUserId = keycloakUserId };
+        return await _client.GetEmployeeByKeycloakIdAsync(request);
     }
 }

@@ -28,10 +28,11 @@ public class AttendanceController : ControllerBase
     [HttpPost("check-in")]
     public async Task<IActionResult> CheckIn([FromBody] CheckInDto dto)
     {
-        var employeeId = GetCurrentEmployeeId();
+        var rawId = dto.EmployeeId ?? GetCurrentEmployeeId();
+        var employeeId = await ResolveEmployeeIdAsync(rawId);
         var request = new Protos.CheckInRequest
         {
-            EmployeeId = dto.EmployeeId ?? employeeId,
+            EmployeeId = employeeId,
             Note = dto.Note ?? "",
             Latitude = dto.Latitude ?? 0,
             Longitude = dto.Longitude ?? 0
@@ -52,10 +53,11 @@ public class AttendanceController : ControllerBase
     [HttpPost("check-out")]
     public async Task<IActionResult> CheckOut([FromBody] CheckOutDto dto)
     {
-        var employeeId = GetCurrentEmployeeId();
+        var rawId = dto.EmployeeId ?? GetCurrentEmployeeId();
+        var employeeId = await ResolveEmployeeIdAsync(rawId);
         var request = new Protos.CheckOutRequest
         {
-            EmployeeId = dto.EmployeeId ?? employeeId,
+            EmployeeId = employeeId,
             Note = dto.Note ?? "",
             Latitude = dto.Latitude ?? 0,
             Longitude = dto.Longitude ?? 0
@@ -79,7 +81,8 @@ public class AttendanceController : ControllerBase
     [HttpGet("status")]
     public async Task<IActionResult> GetAttendanceStatus([FromQuery] string? employeeId = null, [FromQuery] string? date = null)
     {
-        var id = employeeId ?? GetCurrentEmployeeId();
+        var rawId = employeeId ?? GetCurrentEmployeeId();
+        var id = await ResolveEmployeeIdAsync(rawId);
         var response = await _timeService.GetAttendanceStatusAsync(id, date);
         return Ok(new
         {
@@ -99,7 +102,8 @@ public class AttendanceController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        var id = employeeId ?? GetCurrentEmployeeId();
+        var rawId = employeeId ?? GetCurrentEmployeeId();
+        var id = await ResolveEmployeeIdAsync(rawId);
         var response = await _timeService.GetAttendanceHistoryAsync(id, startDate, endDate, page, pageSize);
         
         return Ok(new
@@ -267,7 +271,8 @@ public class AttendanceController : ControllerBase
     [HttpGet("shift")]
     public async Task<IActionResult> GetEmployeeShift([FromQuery] string? employeeId = null, [FromQuery] string? date = null)
     {
-        var id = employeeId ?? GetCurrentEmployeeId();
+        var rawId = employeeId ?? GetCurrentEmployeeId();
+        var id = await ResolveEmployeeIdAsync(rawId);
         var response = await _timeService.GetEmployeeShiftAsync(id, date);
         if (response.Shift == null)
         {
@@ -286,18 +291,36 @@ public class AttendanceController : ControllerBase
 
     private string GetCurrentEmployeeId()
     {
-        // Get employee_id from JWT claims (set by Keycloak)
+        // Get employee_id from JWT claims — only use if it's a valid GUID (DB employee ID)
         var employeeId = User.FindFirst("employee_id")?.Value;
-
-        if (!string.IsNullOrEmpty(employeeId))
+        if (!string.IsNullOrEmpty(employeeId) && Guid.TryParse(employeeId, out _))
             return employeeId;
 
-        // Fallback: try to get from preferred_username (might be employee code)
-        var username = User.FindFirst("preferred_username")?.Value;
-        if (!string.IsNullOrEmpty(username))
-            return username;
-
-        // Last resort: use sub (Keycloak user ID)
+        // Use sub (Keycloak user UUID) — ResolveEmployeeIdAsync will resolve to DB ID
         return User.FindFirst("sub")?.Value ?? "";
+    }
+
+    private async Task<string> ResolveEmployeeIdAsync(string rawId)
+    {
+        // Try Keycloak lookup first — resolves both Keycloak UUIDs and non-GUID identifiers to DB ID
+        try
+        {
+            var employee = await _employeeService.GetEmployeeByKeycloakIdAsync(rawId);
+            if (!string.IsNullOrEmpty(employee.Id))
+                return employee.Id;
+
+            // Fallback: seed data may store username instead of UUID — try preferred_username
+            var username = User.FindFirst("preferred_username")?.Value;
+            if (!string.IsNullOrEmpty(username))
+            {
+                employee = await _employeeService.GetEmployeeByKeycloakIdAsync(username);
+                if (!string.IsNullOrEmpty(employee.Id))
+                    return employee.Id;
+            }
+        }
+        catch { }
+
+        // rawId is already a DB employee ID (GUID)
+        return rawId;
     }
 }

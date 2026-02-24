@@ -17,6 +17,7 @@ service EmployeeGrpc {
   rpc AssignRole (AssignRoleRequest) returns (AssignRoleResponse);
   rpc GetDepartments (GetDepartmentsRequest) returns (DepartmentsResponse);
   rpc GetTeams (GetTeamsRequest) returns (TeamsResponse);
+  rpc GetEmployeeByKeycloakId (GetEmployeeByKeycloakIdRequest) returns (EmployeeResponse);
 }
 
 message GetEmployeeRequest {
@@ -172,4 +173,8 @@ message Team {
 
 message TeamsResponse {
   repeated Team teams = 1;
+}
+
+message GetEmployeeByKeycloakIdRequest {
+  string keycloak_user_id = 1;
 }

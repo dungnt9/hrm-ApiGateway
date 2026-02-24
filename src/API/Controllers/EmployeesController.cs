@@ -37,14 +37,68 @@ public class EmployeesController : ControllerBase
         });
     }
 
+    [HttpGet("me")]
+    public async Task<IActionResult> GetCurrentEmployee()
+    {
+        var keycloakId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(keycloakId))
+            return Unauthorized();
+
+        var response = await _employeeService.GetEmployeeByKeycloakIdAsync(keycloakId);
+
+        // Fallback: seed data may store username instead of UUID — try preferred_username
+        if (string.IsNullOrEmpty(response.Id))
+        {
+            var username = User.FindFirst("preferred_username")?.Value;
+            if (!string.IsNullOrEmpty(username))
+                response = await _employeeService.GetEmployeeByKeycloakIdAsync(username);
+        }
+
+        if (string.IsNullOrEmpty(response.Id))
+            return NotFound(new { message = "Employee not found" });
+
+        return Ok(MapToDto(response));
+    }
+
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateCurrentEmployee([FromBody] UpdateEmployeeDto dto)
+    {
+        var keycloakId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(keycloakId))
+            return Unauthorized();
+
+        var existing = await _employeeService.GetEmployeeByKeycloakIdAsync(keycloakId);
+        if (string.IsNullOrEmpty(existing.Id))
+            return NotFound(new { message = "Employee not found" });
+
+        var request = new Protos.UpdateEmployeeRequest
+        {
+            EmployeeId = existing.Id,
+            FirstName = dto.FirstName ?? "",
+            LastName = dto.LastName ?? "",
+            Email = dto.Email ?? "",
+            Phone = dto.Phone ?? "",
+            DepartmentId = dto.DepartmentId ?? "",
+            TeamId = dto.TeamId ?? "",
+            Position = dto.Position ?? "",
+            ManagerId = dto.ManagerId ?? "",
+            Status = dto.Status ?? ""
+        };
+
+        var response = await _employeeService.UpdateEmployeeAsync(request);
+        if (string.IsNullOrEmpty(response.Id))
+            return NotFound(new { message = "Employee not found" });
+
+        return Ok(MapToDto(response));
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetEmployee(string id)
     {
         var response = await _employeeService.GetEmployeeAsync(id);
         if (string.IsNullOrEmpty(response.Id))
-        {
             return NotFound(new { message = "Employee not found" });
-        }
+
         return Ok(MapToDto(response));
     }
 
@@ -89,6 +143,9 @@ public class EmployeesController : ControllerBase
         };
 
         var response = await _employeeService.UpdateEmployeeAsync(request);
+        if (string.IsNullOrEmpty(response.Id))
+            return NotFound(new { message = "Employee not found" });
+
         return Ok(MapToDto(response));
     }
 
@@ -98,9 +155,8 @@ public class EmployeesController : ControllerBase
     {
         var response = await _employeeService.DeleteEmployeeAsync(id);
         if (!response.Success)
-        {
             return BadRequest(new { message = response.Message });
-        }
+
         return NoContent();
     }
 
@@ -109,9 +165,8 @@ public class EmployeesController : ControllerBase
     {
         var response = await _employeeService.GetEmployeeManagerAsync(id);
         if (string.IsNullOrEmpty(response.Id))
-        {
             return NotFound(new { message = "Manager not found" });
-        }
+
         return Ok(MapToDto(response));
     }
 
@@ -137,9 +192,8 @@ public class EmployeesController : ControllerBase
     {
         var response = await _employeeService.AssignRoleAsync(id, dto.Role);
         if (!response.Success)
-        {
             return BadRequest(new { message = response.Message });
-        }
+
         return Ok(new { message = response.Message });
     }
 
