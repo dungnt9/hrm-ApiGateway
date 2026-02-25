@@ -16,7 +16,15 @@ service EmployeeGrpc {
   rpc ValidateManagerPermission (ValidateManagerPermissionRequest) returns (ValidateManagerPermissionResponse);
   rpc AssignRole (AssignRoleRequest) returns (AssignRoleResponse);
   rpc GetDepartments (GetDepartmentsRequest) returns (DepartmentsResponse);
+  rpc GetDepartment (GetDepartmentRequest) returns (Department);
+  rpc CreateDepartment (CreateDepartmentRequest) returns (Department);
+  rpc UpdateDepartment (UpdateDepartmentRequest) returns (Department);
+  rpc DeleteDepartment (DeleteDepartmentRequest) returns (DeleteDepartmentResponse);
   rpc GetTeams (GetTeamsRequest) returns (TeamsResponse);
+  rpc GetTeam (GetTeamRequest) returns (Team);
+  rpc CreateTeam (CreateTeamRequest) returns (Team);
+  rpc UpdateTeam (UpdateTeamRequest) returns (Team);
+  rpc DeleteTeam (DeleteTeamRequest) returns (DeleteTeamResponse);
   rpc GetEmployeeByKeycloakId (GetEmployeeByKeycloakIdRequest) returns (EmployeeResponse);
 }
 
@@ -30,6 +38,7 @@ message GetEmployeesRequest {
   string department_id = 3;
   string team_id = 4;
   string search = 5;
+  string status = 6;
 }
 
 message CreateEmployeeRequest {
@@ -152,6 +161,33 @@ message Department {
   string manager_id = 4;
   string manager_name = 5;
   string created_at = 6;
+  string description = 7;
+}
+
+message GetDepartmentRequest {
+  string department_id = 1;
+}
+
+message CreateDepartmentRequest {
+  string name = 1;
+  string description = 2;
+  string manager_id = 3;
+}
+
+message UpdateDepartmentRequest {
+  string department_id = 1;
+  string name = 2;
+  string description = 3;
+  string manager_id = 4;
+}
+
+message DeleteDepartmentRequest {
+  string department_id = 1;
+}
+
+message DeleteDepartmentResponse {
+  bool success = 1;
+  string message = 2;
 }
 
 message DepartmentsResponse {
@@ -169,6 +205,35 @@ message Team {
   string manager_id = 4;
   string manager_name = 5;
   string created_at = 6;
+  string description = 7;
+}
+
+message GetTeamRequest {
+  string team_id = 1;
+}
+
+message CreateTeamRequest {
+  string name = 1;
+  string description = 2;
+  string department_id = 3;
+  string leader_id = 4;
+}
+
+message UpdateTeamRequest {
+  string team_id = 1;
+  string name = 2;
+  string description = 3;
+  string department_id = 4;
+  string leader_id = 5;
+}
+
+message DeleteTeamRequest {
+  string team_id = 1;
+}
+
+message DeleteTeamResponse {
+  bool success = 1;
+  string message = 2;
 }
 
 message TeamsResponse {

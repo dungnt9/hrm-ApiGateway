@@ -88,3 +88,33 @@ public class RejectOvertimeRequestDto
 {
     public string Reason { get; set; } = string.Empty;
 }
+
+public class CreateDepartmentDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? ManagerId { get; set; }
+}
+
+public class UpdateDepartmentDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? ManagerId { get; set; }
+}
+
+public class CreateTeamDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string DepartmentId { get; set; } = string.Empty;
+    public string? LeaderId { get; set; }
+}
+
+public class UpdateTeamDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? DepartmentId { get; set; }
+    public string? LeaderId { get; set; }
+}

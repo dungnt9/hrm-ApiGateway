@@ -6,7 +6,7 @@ namespace ApiGateway.Services;
 public interface IEmployeeGrpcService
 {
     Task<EmployeeResponse> GetEmployeeAsync(string employeeId);
-    Task<EmployeesResponse> GetEmployeesAsync(int page, int pageSize, string? departmentId, string? teamId, string? search);
+    Task<EmployeesResponse> GetEmployeesAsync(int page, int pageSize, string? departmentId, string? teamId, string? search, string? status = null);
     Task<EmployeeResponse> CreateEmployeeAsync(CreateEmployeeRequest request);
     Task<EmployeeResponse> UpdateEmployeeAsync(UpdateEmployeeRequest request);
     Task<DeleteEmployeeResponse> DeleteEmployeeAsync(string employeeId);
@@ -16,7 +16,15 @@ public interface IEmployeeGrpcService
     Task<ValidateManagerPermissionResponse> ValidateManagerPermissionAsync(string managerId, string employeeId);
     Task<AssignRoleResponse> AssignRoleAsync(string employeeId, string role);
     Task<DepartmentsResponse> GetDepartmentsAsync(string? companyId);
+    Task<Department> GetDepartmentAsync(string departmentId);
+    Task<Department> CreateDepartmentAsync(CreateDepartmentRequest request);
+    Task<Department> UpdateDepartmentAsync(UpdateDepartmentRequest request);
+    Task<DeleteDepartmentResponse> DeleteDepartmentAsync(string departmentId);
     Task<TeamsResponse> GetTeamsAsync(string? departmentId);
+    Task<Team> GetTeamAsync(string teamId);
+    Task<Team> CreateTeamAsync(CreateTeamRequest request);
+    Task<Team> UpdateTeamAsync(UpdateTeamRequest request);
+    Task<DeleteTeamResponse> DeleteTeamAsync(string teamId);
     Task<EmployeeResponse> GetEmployeeByKeycloakIdAsync(string keycloakUserId);
 }
 
@@ -37,7 +45,7 @@ public class EmployeeGrpcService : IEmployeeGrpcService
         return await _client.GetEmployeeAsync(request);
     }
 
-    public async Task<EmployeesResponse> GetEmployeesAsync(int page, int pageSize, string? departmentId, string? teamId, string? search)
+    public async Task<EmployeesResponse> GetEmployeesAsync(int page, int pageSize, string? departmentId, string? teamId, string? search, string? status = null)
     {
         var request = new GetEmployeesRequest
         {
@@ -45,7 +53,8 @@ public class EmployeeGrpcService : IEmployeeGrpcService
             PageSize = pageSize,
             DepartmentId = departmentId ?? "",
             TeamId = teamId ?? "",
-            Search = search ?? ""
+            Search = search ?? "",
+            Status = status ?? ""
         };
         return await _client.GetEmployeesAsync(request);
     }
@@ -118,10 +127,54 @@ public class EmployeeGrpcService : IEmployeeGrpcService
         return await _client.GetDepartmentsAsync(request);
     }
 
+    public async Task<Department> GetDepartmentAsync(string departmentId)
+    {
+        var request = new GetDepartmentRequest { DepartmentId = departmentId };
+        return await _client.GetDepartmentAsync(request);
+    }
+
+    public async Task<Department> CreateDepartmentAsync(CreateDepartmentRequest request)
+    {
+        return await _client.CreateDepartmentAsync(request);
+    }
+
+    public async Task<Department> UpdateDepartmentAsync(UpdateDepartmentRequest request)
+    {
+        return await _client.UpdateDepartmentAsync(request);
+    }
+
+    public async Task<DeleteDepartmentResponse> DeleteDepartmentAsync(string departmentId)
+    {
+        var request = new DeleteDepartmentRequest { DepartmentId = departmentId };
+        return await _client.DeleteDepartmentAsync(request);
+    }
+
     public async Task<TeamsResponse> GetTeamsAsync(string? departmentId)
     {
         var request = new GetTeamsRequest { DepartmentId = departmentId ?? "" };
         return await _client.GetTeamsAsync(request);
+    }
+
+    public async Task<Team> GetTeamAsync(string teamId)
+    {
+        var request = new GetTeamRequest { TeamId = teamId };
+        return await _client.GetTeamAsync(request);
+    }
+
+    public async Task<Team> CreateTeamAsync(CreateTeamRequest request)
+    {
+        return await _client.CreateTeamAsync(request);
+    }
+
+    public async Task<Team> UpdateTeamAsync(UpdateTeamRequest request)
+    {
+        return await _client.UpdateTeamAsync(request);
+    }
+
+    public async Task<DeleteTeamResponse> DeleteTeamAsync(string teamId)
+    {
+        var request = new DeleteTeamRequest { TeamId = teamId };
+        return await _client.DeleteTeamAsync(request);
     }
 
     public async Task<EmployeeResponse> GetEmployeeByKeycloakIdAsync(string keycloakUserId)

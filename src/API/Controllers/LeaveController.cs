@@ -107,6 +107,28 @@ public class LeaveController : ControllerBase
         });
     }
 
+    [HttpGet("approvals/processed")]
+    [Authorize(Policy = "ManagerOrHR")]
+    public async Task<IActionResult> GetProcessedApprovals(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var approverId = GetCurrentEmployeeId();
+        // Fetch requests for this approver without status filter, then exclude pending
+        var response = await _timeService.GetLeaveRequestsAsync(null, approverId, null, null, null, null, page, pageSize * 3);
+        var processed = response.Requests
+            .Where(r => !string.Equals(r.Status, "pending", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return Ok(new
+        {
+            data = processed.Take(pageSize).Select(MapToDto),
+            totalCount = processed.Count,
+            page,
+            pageSize
+        });
+    }
+
     [HttpGet("request/{id}")]
     public async Task<IActionResult> GetLeaveRequest(string id)
     {

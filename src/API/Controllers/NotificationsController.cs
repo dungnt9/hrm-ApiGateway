@@ -108,6 +108,38 @@ public class NotificationsController : ControllerBase
     }
 
     /// <summary>
+    /// Delete a notification
+    /// </summary>
+    /// <param name="id">Notification ID</param>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteNotification(Guid id)
+    {
+        try
+        {
+            var token = GetAuthorizationToken();
+            var url = $"{_notificationServiceUrl}/api/notifications/{id}";
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError($"Notification service error: {response.StatusCode}");
+                return StatusCode((int)response.StatusCode, new { message = "Failed to delete notification" });
+            }
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting notification");
+            return StatusCode(500, new { message = "Internal server error" });
+        }
+    }
+
+    /// <summary>
     /// Mark all notifications as read for current user
     /// </summary>
     [HttpPost("read-all")]

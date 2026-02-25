@@ -25,9 +25,10 @@ public class EmployeesController : ControllerBase
         [FromQuery] int pageSize = 10,
         [FromQuery] string? departmentId = null,
         [FromQuery] string? teamId = null,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null)
     {
-        var response = await _employeeService.GetEmployeesAsync(page, pageSize, departmentId, teamId, search);
+        var response = await _employeeService.GetEmployeesAsync(page, pageSize, departmentId, teamId, search, status);
         return Ok(new
         {
             data = response.Employees.Select(MapToDto),
@@ -201,31 +202,139 @@ public class EmployeesController : ControllerBase
     public async Task<IActionResult> GetDepartments([FromQuery] string? companyId = null)
     {
         var response = await _employeeService.GetDepartmentsAsync(companyId);
-        return Ok(response.Departments.Select(d => new
+        return Ok(response.Departments.Select(MapDepartmentToDto));
+    }
+
+    [HttpGet("departments/{id}")]
+    public async Task<IActionResult> GetDepartment(string id)
+    {
+        var d = await _employeeService.GetDepartmentAsync(id);
+        if (string.IsNullOrEmpty(d.Id))
+            return NotFound(new { message = "Department not found" });
+        return Ok(MapDepartmentToDto(d));
+    }
+
+    [HttpPost("departments")]
+    [Authorize(Policy = "HRStaff")]
+    public async Task<IActionResult> CreateDepartment([FromBody] CreateDepartmentDto dto)
+    {
+        var request = new Protos.CreateDepartmentRequest
         {
-            id = d.Id,
-            name = d.Name,
-            companyId = d.CompanyId,
-            managerId = d.ManagerId,
-            managerName = d.ManagerName,
-            createdAt = d.CreatedAt
-        }));
+            Name = dto.Name,
+            Description = dto.Description ?? "",
+            ManagerId = dto.ManagerId ?? ""
+        };
+        var d = await _employeeService.CreateDepartmentAsync(request);
+        return CreatedAtAction(nameof(GetDepartment), new { id = d.Id }, MapDepartmentToDto(d));
+    }
+
+    [HttpPut("departments/{id}")]
+    [Authorize(Policy = "HRStaff")]
+    public async Task<IActionResult> UpdateDepartment(string id, [FromBody] UpdateDepartmentDto dto)
+    {
+        var request = new Protos.UpdateDepartmentRequest
+        {
+            DepartmentId = id,
+            Name = dto.Name,
+            Description = dto.Description ?? "",
+            ManagerId = dto.ManagerId ?? ""
+        };
+        var d = await _employeeService.UpdateDepartmentAsync(request);
+        if (string.IsNullOrEmpty(d.Id))
+            return NotFound(new { message = "Department not found" });
+        return Ok(MapDepartmentToDto(d));
+    }
+
+    [HttpDelete("departments/{id}")]
+    [Authorize(Policy = "HRStaff")]
+    public async Task<IActionResult> DeleteDepartment(string id)
+    {
+        var response = await _employeeService.DeleteDepartmentAsync(id);
+        if (!response.Success)
+            return BadRequest(new { message = response.Message });
+        return NoContent();
     }
 
     [HttpGet("teams")]
     public async Task<IActionResult> GetTeams([FromQuery] string? departmentId = null)
     {
         var response = await _employeeService.GetTeamsAsync(departmentId);
-        return Ok(response.Teams.Select(t => new
-        {
-            id = t.Id,
-            name = t.Name,
-            departmentId = t.DepartmentId,
-            managerId = t.ManagerId,
-            managerName = t.ManagerName,
-            createdAt = t.CreatedAt
-        }));
+        return Ok(response.Teams.Select(MapTeamToDto));
     }
+
+    [HttpGet("teams/{id}")]
+    public async Task<IActionResult> GetTeam(string id)
+    {
+        var t = await _employeeService.GetTeamAsync(id);
+        if (string.IsNullOrEmpty(t.Id))
+            return NotFound(new { message = "Team not found" });
+        return Ok(MapTeamToDto(t));
+    }
+
+    [HttpPost("teams")]
+    [Authorize(Policy = "HRStaff")]
+    public async Task<IActionResult> CreateTeam([FromBody] CreateTeamDto dto)
+    {
+        var request = new Protos.CreateTeamRequest
+        {
+            Name = dto.Name,
+            Description = dto.Description ?? "",
+            DepartmentId = dto.DepartmentId,
+            LeaderId = dto.LeaderId ?? ""
+        };
+        var t = await _employeeService.CreateTeamAsync(request);
+        return CreatedAtAction(nameof(GetTeam), new { id = t.Id }, MapTeamToDto(t));
+    }
+
+    [HttpPut("teams/{id}")]
+    [Authorize(Policy = "HRStaff")]
+    public async Task<IActionResult> UpdateTeam(string id, [FromBody] UpdateTeamDto dto)
+    {
+        var request = new Protos.UpdateTeamRequest
+        {
+            TeamId = id,
+            Name = dto.Name,
+            Description = dto.Description ?? "",
+            DepartmentId = dto.DepartmentId ?? "",
+            LeaderId = dto.LeaderId ?? ""
+        };
+        var t = await _employeeService.UpdateTeamAsync(request);
+        if (string.IsNullOrEmpty(t.Id))
+            return NotFound(new { message = "Team not found" });
+        return Ok(MapTeamToDto(t));
+    }
+
+    [HttpDelete("teams/{id}")]
+    [Authorize(Policy = "HRStaff")]
+    public async Task<IActionResult> DeleteTeam(string id)
+    {
+        var response = await _employeeService.DeleteTeamAsync(id);
+        if (!response.Success)
+            return BadRequest(new { message = response.Message });
+        return NoContent();
+    }
+
+    private static object MapDepartmentToDto(Protos.Department d) => new
+    {
+        id = d.Id,
+        name = d.Name,
+        companyId = d.CompanyId,
+        managerId = d.ManagerId,
+        managerName = d.ManagerName,
+        description = d.Description,
+        createdAt = d.CreatedAt
+    };
+
+    private static object MapTeamToDto(Protos.Team t) => new
+    {
+        id = t.Id,
+        name = t.Name,
+        departmentId = t.DepartmentId,
+        managerId = t.ManagerId,
+        managerName = t.ManagerName,
+        description = t.Description,
+        createdAt = t.CreatedAt
+    };
 
     private static object MapToDto(Protos.EmployeeResponse e) => new
     {
