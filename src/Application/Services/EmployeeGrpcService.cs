@@ -26,6 +26,21 @@ public interface IEmployeeGrpcService
     Task<Team> UpdateTeamAsync(UpdateTeamRequest request);
     Task<DeleteTeamResponse> DeleteTeamAsync(string teamId);
     Task<EmployeeResponse> GetEmployeeByKeycloakIdAsync(string keycloakUserId);
+    // Documents
+    Task<DocumentsResponse> GetDocumentsAsync(string employeeId);
+    Task<DocumentResponse> AddDocumentAsync(AddDocumentRequest request);
+    Task<DeleteDocumentResponse> DeleteDocumentAsync(string documentId, string employeeId);
+    // Contacts
+    Task<ContactsResponse> GetContactsAsync(string employeeId);
+    Task<ContactResponse> AddContactAsync(AddContactRequest request);
+    Task<ContactResponse> UpdateContactAsync(UpdateContactRequest request);
+    Task<DeleteContactResponse> DeleteContactAsync(string contactId, string employeeId);
+    // Announcements
+    Task<AnnouncementsResponse> GetAnnouncementsAsync(GetAnnouncementsRequest request);
+    Task<AnnouncementResponse> GetAnnouncementAsync(string id);
+    Task<AnnouncementResponse> CreateAnnouncementAsync(CreateAnnouncementRequest request);
+    Task<AnnouncementResponse> UpdateAnnouncementAsync(UpdateAnnouncementRequest request);
+    Task<DeleteAnnouncementResponse> DeleteAnnouncementAsync(string id);
 }
 
 public class EmployeeGrpcService : IEmployeeGrpcService
@@ -181,5 +196,71 @@ public class EmployeeGrpcService : IEmployeeGrpcService
     {
         var request = new GetEmployeeByKeycloakIdRequest { KeycloakUserId = keycloakUserId };
         return await _client.GetEmployeeByKeycloakIdAsync(request);
+    }
+
+    // ===== Documents =====
+
+    public async Task<DocumentsResponse> GetDocumentsAsync(string employeeId)
+    {
+        return await _client.GetDocumentsAsync(new GetDocumentsRequest { EmployeeId = employeeId });
+    }
+
+    public async Task<DocumentResponse> AddDocumentAsync(AddDocumentRequest request)
+    {
+        return await _client.AddDocumentAsync(request);
+    }
+
+    public async Task<DeleteDocumentResponse> DeleteDocumentAsync(string documentId, string employeeId)
+    {
+        return await _client.DeleteDocumentAsync(new DeleteDocumentRequest { DocumentId = documentId, EmployeeId = employeeId });
+    }
+
+    // ===== Contacts =====
+
+    public async Task<ContactsResponse> GetContactsAsync(string employeeId)
+    {
+        return await _client.GetContactsAsync(new GetContactsRequest { EmployeeId = employeeId });
+    }
+
+    public async Task<ContactResponse> AddContactAsync(AddContactRequest request)
+    {
+        return await _client.AddContactAsync(request);
+    }
+
+    public async Task<ContactResponse> UpdateContactAsync(UpdateContactRequest request)
+    {
+        return await _client.UpdateContactAsync(request);
+    }
+
+    public async Task<DeleteContactResponse> DeleteContactAsync(string contactId, string employeeId)
+    {
+        return await _client.DeleteContactAsync(new DeleteContactRequest { ContactId = contactId, EmployeeId = employeeId });
+    }
+
+    // ===== Announcements =====
+
+    public async Task<AnnouncementsResponse> GetAnnouncementsAsync(GetAnnouncementsRequest request)
+    {
+        return await _client.GetAnnouncementsAsync(request);
+    }
+
+    public async Task<AnnouncementResponse> GetAnnouncementAsync(string id)
+    {
+        return await _client.GetAnnouncementAsync(new GetAnnouncementRequest { Id = id });
+    }
+
+    public async Task<AnnouncementResponse> CreateAnnouncementAsync(CreateAnnouncementRequest request)
+    {
+        return await _client.CreateAnnouncementAsync(request);
+    }
+
+    public async Task<AnnouncementResponse> UpdateAnnouncementAsync(UpdateAnnouncementRequest request)
+    {
+        return await _client.UpdateAnnouncementAsync(request);
+    }
+
+    public async Task<DeleteAnnouncementResponse> DeleteAnnouncementAsync(string id)
+    {
+        return await _client.DeleteAnnouncementAsync(new DeleteAnnouncementRequest { Id = id });
     }
 }

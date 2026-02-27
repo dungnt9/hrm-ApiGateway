@@ -118,3 +118,51 @@ public class UpdateTeamDto
     public string? DepartmentId { get; set; }
     public string? LeaderId { get; set; }
 }
+
+public class AddDocumentDto
+{
+    public string DocumentType { get; set; } = string.Empty;
+    public string DocumentName { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
+    public string? Description { get; set; }
+}
+
+public class AddContactDto
+{
+    public string ContactName { get; set; } = string.Empty;
+    public string Relationship { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Address { get; set; }
+    public bool IsPrimary { get; set; }
+}
+
+public class UpdateContactDto
+{
+    public string ContactName { get; set; } = string.Empty;
+    public string Relationship { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Address { get; set; }
+    public bool IsPrimary { get; set; }
+}
+
+public class CreateAnnouncementDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string Category { get; set; } = "General";
+    public bool IsPinned { get; set; }
+    public string? ExpiresAt { get; set; }
+    public string? DepartmentId { get; set; }
+}
+
+public class UpdateAnnouncementDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string Category { get; set; } = "General";
+    public bool IsPinned { get; set; }
+    public string? ExpiresAt { get; set; }
+    public string? DepartmentId { get; set; }
+}

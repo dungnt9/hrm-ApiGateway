@@ -314,6 +314,151 @@ public class EmployeesController : ControllerBase
         return NoContent();
     }
 
+    // ===== Documents =====
+
+    [HttpGet("{id}/documents")]
+    public async Task<IActionResult> GetDocuments(string id)
+    {
+        var response = await _employeeService.GetDocumentsAsync(id);
+        return Ok(response.Documents.Select(d => new
+        {
+            id = d.Id,
+            employeeId = d.EmployeeId,
+            documentType = d.DocumentType,
+            documentName = d.DocumentName,
+            filePath = d.FilePath,
+            description = string.IsNullOrEmpty(d.Description) ? (string?)null : d.Description,
+            uploadedAt = d.UploadedAt,
+            uploadedBy = string.IsNullOrEmpty(d.UploadedBy) ? (string?)null : d.UploadedBy
+        }));
+    }
+
+    [HttpPost("{id}/documents")]
+    public async Task<IActionResult> AddDocument(string id, [FromBody] AddDocumentDto dto)
+    {
+        var keycloakId = User.FindFirst("sub")?.Value ?? "";
+        var uploader = await _employeeService.GetEmployeeByKeycloakIdAsync(keycloakId);
+
+        var request = new Protos.AddDocumentRequest
+        {
+            EmployeeId = id,
+            DocumentType = dto.DocumentType,
+            DocumentName = dto.DocumentName,
+            FilePath = dto.FilePath,
+            Description = dto.Description ?? "",
+            UploadedBy = uploader.Id ?? ""
+        };
+
+        var response = await _employeeService.AddDocumentAsync(request);
+        return Ok(new
+        {
+            id = response.Id,
+            employeeId = response.EmployeeId,
+            documentType = response.DocumentType,
+            documentName = response.DocumentName,
+            filePath = response.FilePath,
+            description = string.IsNullOrEmpty(response.Description) ? (string?)null : response.Description,
+            uploadedAt = response.UploadedAt
+        });
+    }
+
+    [HttpDelete("{id}/documents/{documentId}")]
+    public async Task<IActionResult> DeleteDocument(string id, string documentId)
+    {
+        var response = await _employeeService.DeleteDocumentAsync(documentId, id);
+        if (!response.Success)
+            return BadRequest(new { message = response.Message });
+        return NoContent();
+    }
+
+    // ===== Emergency Contacts =====
+
+    [HttpGet("{id}/contacts")]
+    public async Task<IActionResult> GetContacts(string id)
+    {
+        var response = await _employeeService.GetContactsAsync(id);
+        return Ok(response.Contacts.Select(c => new
+        {
+            id = c.Id,
+            employeeId = c.EmployeeId,
+            contactName = c.ContactName,
+            relationship = c.Relationship,
+            phone = c.Phone,
+            email = string.IsNullOrEmpty(c.Email) ? (string?)null : c.Email,
+            address = string.IsNullOrEmpty(c.Address) ? (string?)null : c.Address,
+            isPrimary = c.IsPrimary
+        }));
+    }
+
+    [HttpPost("{id}/contacts")]
+    public async Task<IActionResult> AddContact(string id, [FromBody] AddContactDto dto)
+    {
+        var request = new Protos.AddContactRequest
+        {
+            EmployeeId = id,
+            ContactName = dto.ContactName,
+            Relationship = dto.Relationship,
+            Phone = dto.Phone,
+            Email = dto.Email ?? "",
+            Address = dto.Address ?? "",
+            IsPrimary = dto.IsPrimary
+        };
+
+        var response = await _employeeService.AddContactAsync(request);
+        return Ok(new
+        {
+            id = response.Id,
+            employeeId = response.EmployeeId,
+            contactName = response.ContactName,
+            relationship = response.Relationship,
+            phone = response.Phone,
+            email = string.IsNullOrEmpty(response.Email) ? (string?)null : response.Email,
+            address = string.IsNullOrEmpty(response.Address) ? (string?)null : response.Address,
+            isPrimary = response.IsPrimary
+        });
+    }
+
+    [HttpPut("{id}/contacts/{contactId}")]
+    public async Task<IActionResult> UpdateContact(string id, string contactId, [FromBody] UpdateContactDto dto)
+    {
+        var request = new Protos.UpdateContactRequest
+        {
+            ContactId = contactId,
+            EmployeeId = id,
+            ContactName = dto.ContactName,
+            Relationship = dto.Relationship,
+            Phone = dto.Phone,
+            Email = dto.Email ?? "",
+            Address = dto.Address ?? "",
+            IsPrimary = dto.IsPrimary
+        };
+
+        var response = await _employeeService.UpdateContactAsync(request);
+        if (string.IsNullOrEmpty(response.Id))
+            return NotFound(new { message = "Contact not found" });
+
+        return Ok(new
+        {
+            id = response.Id,
+            employeeId = response.EmployeeId,
+            contactName = response.ContactName,
+            relationship = response.Relationship,
+            phone = response.Phone,
+            email = string.IsNullOrEmpty(response.Email) ? (string?)null : response.Email,
+            address = string.IsNullOrEmpty(response.Address) ? (string?)null : response.Address,
+            isPrimary = response.IsPrimary
+        });
+    }
+
+    [HttpDelete("{id}/contacts/{contactId}")]
+    public async Task<IActionResult> DeleteContact(string id, string contactId)
+    {
+        var response = await _employeeService.DeleteContactAsync(contactId, id);
+        if (!response.Success)
+            return BadRequest(new { message = response.Message });
+        return NoContent();
+    }
+
     private static object MapDepartmentToDto(Protos.Department d) => new
     {
         id = d.Id,
@@ -354,6 +499,8 @@ public class EmployeesController : ControllerBase
         hireDate = e.HireDate,
         status = e.Status,
         createdAt = e.CreatedAt,
-        updatedAt = e.UpdatedAt
+        updatedAt = e.UpdatedAt,
+        baseSalary = string.IsNullOrEmpty(e.BaseSalary) ? (decimal?)null : decimal.Parse(e.BaseSalary),
+        employeeCode = string.IsNullOrEmpty(e.EmployeeCode) ? (string?)null : e.EmployeeCode
     };
 }
