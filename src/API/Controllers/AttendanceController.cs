@@ -1,5 +1,6 @@
 using ApiGateway.Models;
 using ApiGateway.Services;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -252,7 +253,148 @@ public class AttendanceController : ControllerBase
             return StatusCode(500, new { message = "Internal server error", error = ex.Message });
         }
     }
+    /// <summary>
+    /// Export attendance history to Excel with modern formatting
+    /// </summary>
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportAttendanceToExcel(
+        [FromQuery] string? employeeId = null,
+        [FromQuery] string? startDate = null,
+        [FromQuery] string? endDate = null)
+    {
+        try
+        {
+            var rawId = employeeId ?? GetCurrentEmployeeId();
+            var id = await ResolveEmployeeIdAsync(rawId);
+            
+            // Get employee info
+            var employee = await _employeeService.GetEmployeeAsync(id);
+            var employeeName = $"{employee.FirstName} {employee.LastName}";
+            var employeeCode = employee.EmployeeCode;
 
+            // Get attendance data
+            var response = await _timeService.GetAttendanceHistoryAsync(id, startDate, endDate, 1, 1000);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Attendance Report");
+
+            // Title styling
+            worksheet.Cell("A1").Value = "ATTENDANCE REPORT";
+            worksheet.Cell("A1").Style.Font.FontSize = 16;
+            worksheet.Cell("A1").Style.Font.Bold = true;
+            worksheet.Cell("A1").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            worksheet.Range("A1:H1").Merge();
+
+            // Employee info section
+            worksheet.Cell("A3").Value = "Employee:";
+            worksheet.Cell("B3").Value = employeeName;
+            worksheet.Cell("A4").Value = "Employee Code:";
+            worksheet.Cell("B4").Value = employeeCode;
+            worksheet.Cell("A5").Value = "Period:";
+            worksheet.Cell("B5").Value = $"{startDate ?? "N/A"} to {endDate ?? "N/A"}";
+            worksheet.Cell("A6").Value = "Generated:";
+            worksheet.Cell("B6").Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+            worksheet.Range("A3:A6").Style.Font.Bold = true;
+
+            // Headers
+            int headerRow = 8;
+            var headers = new[] { "Date", "Check In", "Check Out", "Total Hours", "Status", "Late (min)", "Early Leave (min)", "Note" };
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = worksheet.Cell(headerRow, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = XLColor.FromArgb(79, 129, 189);
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            // Data rows
+            int row = headerRow + 1;
+            foreach (var record in response.Records)
+            {
+                worksheet.Cell(row, 1).Value = record.Date;
+                worksheet.Cell(row, 2).Value = record.CheckInTime;
+                worksheet.Cell(row, 3).Value = record.CheckOutTime;
+                worksheet.Cell(row, 4).Value = record.TotalHours;
+                worksheet.Cell(row, 5).Value = record.CheckInStatus;
+                worksheet.Cell(row, 6).Value = record.LateMinutes;
+                worksheet.Cell(row, 7).Value = record.EarlyLeaveMinutes;
+                worksheet.Cell(row, 8).Value = record.Note;
+
+                // Apply zebra striping
+                if ((row - headerRow) % 2 == 0)
+                {
+                    worksheet.Range(row, 1, row, 8).Style.Fill.BackgroundColor = XLColor.FromArgb(220, 230, 241);
+                }
+
+                // Color code status
+                var statusCell = worksheet.Cell(row, 5);
+                switch (record.CheckInStatus?.ToLower())
+                {
+                    case "on_time":
+                    case "ontime":
+                        statusCell.Style.Font.FontColor = XLColor.Green;
+                        break;
+                    case "late":
+                        statusCell.Style.Font.FontColor = XLColor.Orange;
+                        break;
+                    case "absent":
+                        statusCell.Style.Font.FontColor = XLColor.Red;
+                        break;
+                }
+
+                // Apply borders
+                worksheet.Range(row, 1, row, 8).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                row++;
+            }
+
+            // Summary section
+            if (response.Summary != null)
+            {
+                row += 2;
+                worksheet.Cell(row, 1).Value = "SUMMARY";
+                worksheet.Cell(row, 1).Style.Font.Bold = true;
+                worksheet.Cell(row, 1).Style.Font.FontSize = 12;
+                row++;
+
+                worksheet.Cell(row, 1).Value = "Total Days:";
+                worksheet.Cell(row, 2).Value = response.Summary.TotalDays;
+                row++;
+                worksheet.Cell(row, 1).Value = "Present Days:";
+                worksheet.Cell(row, 2).Value = response.Summary.PresentDays;
+                row++;
+                worksheet.Cell(row, 1).Value = "Absent Days:";
+                worksheet.Cell(row, 2).Value = response.Summary.AbsentDays;
+                row++;
+                worksheet.Cell(row, 1).Value = "Late Count:";
+                worksheet.Cell(row, 2).Value = response.Summary.LateCount;
+                row++;
+                worksheet.Cell(row, 1).Value = "Total Hours:";
+                worksheet.Cell(row, 2).Value = response.Summary.TotalHours;
+
+                worksheet.Range(row - 5, 1, row, 1).Style.Font.Bold = true;
+            }
+
+            // Auto-fit columns
+            worksheet.Columns().AdjustToContents();
+
+            // Create memory stream
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"Attendance_{employeeCode}_{DateTime.Now:yyyyMMdd}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting attendance to Excel");
+            return StatusCode(500, new { message = "Failed to export attendance data" });
+        }
+    }
     [HttpGet("shifts")]
     public async Task<IActionResult> GetShifts([FromQuery] string? departmentId = null)
     {

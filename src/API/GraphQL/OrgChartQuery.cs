@@ -6,6 +6,7 @@ namespace ApiGateway.GraphQL;
 public class OrgChartQuery
 {
     [Authorize]
+    [GraphQLName("getOrgChart")]
     public async Task<OrgChartNode> GetOrgChart(
         [Service] IEmployeeGrpcService employeeService,
         string? rootId = null,
